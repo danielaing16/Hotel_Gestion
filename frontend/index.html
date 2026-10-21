@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Travel & Resorts - Explora Horizontes</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
+</head>
+<body>
+
+  <!-- Fondo Ambiental con Desenfoque Dinámico -->
+  <div class="ambient-bg"></div>
+  <div class="ambient-overlay"></div>
+
+  <!-- Vista Principal de Autenticación (Diseño de Referencia) -->
+  <div class="master-canvas" id="authCanvas">
+    <div class="canvas-scenery-overlay"></div>
+
+    <!-- Barra Superior del Canvas -->
+    <div class="canvas-header">
+      <button class="circle-nav-btn" id="homeCircleBtn" title="Volver al inicio">
+        ←
+      </button>
+
+      <div class="header-status-pills">
+        <div class="status-badge" title="API Gateway puerto 3000">
+          <span class="dot" id="gatewayDot"></span>
+          <span>Gateway: 3000</span>
+        </div>
+        <div class="status-badge" title="Auth Service puerto 3001">
+          <span class="dot" id="authDot"></span>
+          <span>Auth Service: 3001</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cuerpo del Canvas: Izquierda (Texto Hero) | Derecha (Tarjeta Glassmorphism) -->
+    <div class="canvas-body">
+      
+      <!-- Columna Izquierda: Identidad y Tipografía de Alto Impacto -->
+      <div class="hero-content">
+        <div class="hero-brand">
+          <span class="hero-brand-logo">✈️</span>
+          <span class="hero-brand-name">TRAVEL</span>
+        </div>
+        <h1 class="hero-display-title">
+          EXPLORA<br>HORIZONTES
+        </h1>
+        <p class="hero-tagline">
+          Donde los destinos de tus sueños se hacen realidad.
+        </p>
+        <p class="hero-description">
+          Embárcate en un viaje donde cada rincón del mundo está a tu alcance con tecnología cloud-native y reservas en tiempo real.
+        </p>
+      </div>
+
+      <!-- Columna Derecha: Tarjeta de Acceso Flotante (Glassmorphism) -->
+      <div class="glass-auth-card">
+        
+        <!-- Formulario de Login -->
+        <div id="loginFormView">
+          <form id="loginForm">
+            <div class="field-group">
+              <label class="input-label" for="loginEmail">Correo Electrónico</label>
+              <input 
+                type="email" 
+                id="loginEmail" 
+                class="input-pill" 
+                placeholder="Ingresa tu correo" 
+                required
+              >
+            </div>
+
+            <div class="field-group" style="margin-bottom: 0.25rem;">
+              <label class="input-label" for="loginPassword">Contraseña</label>
+              <input 
+                type="password" 
+                id="loginPassword" 
+                class="input-pill" 
+                placeholder="••••••••••••" 
+                required
+              >
+            </div>
+
+            <a href="#" class="forgot-pass-link" id="forgotPassLink">¿Olvidaste tu contraseña?</a>
+
+            <button type="submit" class="btn-blue" id="submitLoginBtn">
+              <span>INICIAR SESIÓN</span>
+            </button>
+          </form>
+
+          <div class="or-divider">o</div>
+
+          <button type="button" class="btn-social" id="googleLoginBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Iniciar sesión con Google</span>
+          </button>
+
+          <!-- Botones de Relleno Rápido para Presentación -->
+          <div class="quick-demo-wrapper">
+            <button type="button" class="btn-quick-fill" id="fillGuestBtn">👤 Huésped Demo</button>
+            <button type="button" class="btn-quick-fill" id="fillAdminBtn">👑 Admin Demo</button>
+          </div>
+
+          <div class="card-switch-footer">
+            ¿Eres nuevo? <a id="goToRegisterLink">Crear una Cuenta</a>
+          </div>
+        </div>
+
+        <!-- Formulario de Registro (Alternable) -->
+        <div id="registerFormView" style="display: none;">
+          <form id="registerForm">
+            <div class="field-row">
+              <div class="field-group">
+                <label class="input-label" for="regFirstName">Nombre</label>
+                <input type="text" id="regFirstName" class="input-pill" placeholder="Juan" required>
+              </div>
+              <div class="field-group">
+                <label class="input-label" for="regLastName">Apellido</label>
+                <input type="text" id="regLastName" class="input-pill" placeholder="Pérez" required>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="input-label" for="regEmail">Correo Electrónico</label>
+              <input type="email" id="regEmail" class="input-pill" placeholder="juan@hotel.com" required>
+            </div>
+
+            <div class="field-row">
+              <div class="field-group">
+                <label class="input-label" for="regPhone">Teléfono</label>
+                <input type="tel" id="regPhone" class="input-pill" placeholder="+57 300 1234567">
+              </div>
+              <div class="field-group">
+                <label class="input-label" for="regRole">Rol</label>
+                <select id="regRole" class="input-pill" style="cursor: pointer;">
+                  <option value="GUEST" style="color: #000;">Huésped</option>
+                  <option value="HOTEL_ADMIN" style="color: #000;">Administrador</option>
+                  <option value="RECEPTIONIST" style="color: #000;">Recepcionista</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="input-label" for="regPassword">Contraseña</label>
+              <input type="password" id="regPassword" class="input-pill" placeholder="Mínimo 6 caracteres" minlength="6" required>
+            </div>
+
+            <button type="submit" class="btn-blue" id="submitRegBtn">
+              <span>REGISTRARSE</span>
+            </button>
+          </form>
+
+          <div class="card-switch-footer" style="margin-top: 1rem;">
+            ¿Ya tienes cuenta? <a id="goToLoginLink">Inicia Sesión</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Barra Inferior del Canvas (Botones flotantes de la referencia) -->
+    <div class="canvas-bottom-bar">
+      <a href="http://localhost:3000/docs" target="_blank" class="bottom-pill-btn">
+        <span>↗</span> Visitar Swagger API
+      </a>
+
+      <button type="button" class="bottom-pill-btn" id="pingStatusBtn">
+        <span>Buscar estado</span> <span>🔄</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Vista del Dashboard (Aparece tras Iniciar Sesión) -->
+  <div class="dashboard-canvas" id="dashboardCanvas">
+    <div class="dash-topbar">
+      <div class="dash-user-meta">
+        <div class="dash-avatar">✈️</div>
+        <div class="dash-user-info">
+          <h2 id="dashUserName">Usuario Autenticado</h2>
+          <div style="font-size: 0.85rem; color: var(--text-dim);" id="dashUserEmail">correo@hotel.com</div>
+          <span id="dashRoleBadge" class="dash-badge guest">GUEST</span>
+        </div>
+      </div>
+
+      <button id="logoutBtn" class="btn-blue" style="width: auto; padding: 10px 20px; font-size: 0.82rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;">
+        Cerrar Sesión
+      </button>
+    </div>
+
+    <div class="dash-grid">
+      <!-- Tarjeta 1: Token JWT & Sesión -->
+      <div class="dash-card">
+        <div class="dash-card-title">
+          <span>🔐</span> Token de Acceso JWT (Bearer)
+        </div>
+        <div class="dash-card-desc">
+          Emitido por <strong>Auth Service</strong> vía <strong>API Gateway</strong>.
+        </div>
+        <div style="margin-bottom: 0.5rem; font-size: 0.78rem; color: var(--text-dim);">
+          ID de Usuario (UUID): <span id="dashUserId" style="color: #38bdf8; font-family: monospace;"></span>
+        </div>
+        <div class="token-box" id="dashJwtToken">...</div>
+      </div>
+
+      <!-- Tarjeta 2: Demostración de Roles (RBAC) -->
+      <div class="dash-card">
+        <div class="dash-card-title">
+          <span>🛡️</span> Demostración de Permisos RBAC
+        </div>
+        <div class="dash-card-desc">
+          El endpoint <code>GET /api/auth/admin-only</code> solo permite peticiones con rol <code>HOTEL_ADMIN</code>.
+        </div>
+        
+        <button id="testRbacBtn" class="btn-blue" style="margin-bottom: 1rem; width: 100%;">
+          Probar Endpoint de Administrador
+        </button>
+
+        <div id="rbacFeedback" class="token-box" style="display: none; min-height: 80px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Consola de Tráfico HTTP en Vivo -->
+  <div class="live-console-box">
+    <div class="console-title-row">
+      <div class="console-title">
+        <span>📡</span> Consola de Tráfico de Microservicios (API Gateway)
+      </div>
+      <span style="font-size: 0.75rem; color: var(--text-dim);">Peticiones en tiempo real</span>
+    </div>
+    <div class="console-list" id="consoleLogs">
+      <div class="console-entry info">
+        [SYS] Frontend conectado al API Gateway (http://localhost:3000)
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor de Notificaciones Toast -->
+  <div class="toast-shelf" id="toastShelf"></div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
