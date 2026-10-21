@@ -92,6 +92,7 @@ export class AuthController {
   }
 
   @Get('validate-token')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Validar token JWT (Uso para API Gateway y otros microservicios)',
     description: 'Endpoint ligero para verificar validez y roles del token sin acceder a la base de datos de usuarios.',
