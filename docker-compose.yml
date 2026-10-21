@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL para el Auth Service
+  auth-db:
+    image: postgres:16-alpine
+    container_name: hotel_auth_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${AUTH_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-postgres123}
+      POSTGRES_DB: ${AUTH_DB_NAME:-hotel_auth_db}
+    ports:
+      - "${AUTH_DB_PORT:-5432}:5432"
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    networks:
+      - hotel-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-postgres} -d ${AUTH_DB_NAME:-hotel_auth_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Microservicio de Usuarios y Autenticación
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: hotel_auth_service
+    restart: always
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DB_HOST: auth-db
+      DB_PORT: 5432
+      DB_USERNAME: ${AUTH_DB_USER:-postgres}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:-postgres123}
+      DB_DATABASE: ${AUTH_DB_NAME:-hotel_auth_db}
+      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_hotel_2026_dev}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+    ports:
+      - "3001:3001"
+    volumes:
+      # Sincronización en vivo para desarrollo
+      - ./services/auth-service/src:/app/src
+    networks:
+      - hotel-network
+
+volumes:
+  auth_db_data:
+    driver: local
+
+networks:
+  hotel-network:
+    driver: bridge
