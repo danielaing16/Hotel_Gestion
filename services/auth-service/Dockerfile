@@ -6,7 +6,7 @@ RUN apk add --no-cache libc6-compat python3 make g++
 # Etapa 2: Instalación de dependencias
 FROM base AS dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Etapa 3: Compilación
 FROM dependencies AS builder
