@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Base de datos PostgreSQL para el Auth Service
   auth-db:
