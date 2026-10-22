@@ -39,8 +39,29 @@ document.addEventListener('DOMContentLoaded', () => {
   // Indicadores & Logs
   const gatewayDot = document.getElementById('gatewayDot');
   const authDot = document.getElementById('authDot');
+  const hotelsDot = document.getElementById('hotelsDot');
   const consoleLogs = document.getElementById('consoleLogs');
   const toastShelf = document.getElementById('toastShelf');
+
+  // Elementos de Hotels Service
+  const openCreateHotelBtn = document.getElementById('openCreateHotelBtn');
+  const seedHotelsBtn = document.getElementById('seedHotelsBtn');
+  const refreshHotelsBtn = document.getElementById('refreshHotelsBtn');
+  const filterHotelSearch = document.getElementById('filterHotelSearch');
+  const filterHotelCity = document.getElementById('filterHotelCity');
+  const filterHotelStars = document.getElementById('filterHotelStars');
+  const filterPetFriendly = document.getElementById('filterPetFriendly');
+  const hotelsGrid = document.getElementById('hotelsGrid');
+
+  // Modales de Hotel
+  const hotelDetailModal = document.getElementById('hotelDetailModal');
+  const closeDetailModalBtn = document.getElementById('closeDetailModalBtn');
+  const hotelFormModal = document.getElementById('hotelFormModal');
+  const closeFormModalBtn = document.getElementById('closeFormModalBtn');
+  const hotelUpsertForm = document.getElementById('hotelUpsertForm');
+  const hotelFormTitle = document.getElementById('hotelFormTitle');
+  const submitHotelFormBtn = document.getElementById('submitHotelFormBtn');
+
 
   // Sistema de Notificaciones Toast
   function showToast(message, type = 'info') {
@@ -143,6 +164,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const role = user.role || 'GUEST';
       dashRoleBadge.textContent = role;
       dashRoleBadge.className = `dash-badge ${role.toLowerCase()}`;
+
+      // Mostrar botón de creación de hotel únicamente a HOTEL_ADMIN
+      if (openCreateHotelBtn) {
+        openCreateHotelBtn.style.display = role === 'HOTEL_ADMIN' ? 'inline-flex' : 'none';
+      }
+
+      loadHotels();
     } else {
       authCanvas.style.display = 'flex';
       dashboardCanvas.classList.remove('active');
@@ -196,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       showToast('¡Cuenta creada con éxito! Iniciando sesión...', 'success');
-      api.saveSession(response.accessToken, response.user);
       refreshSessionView();
     } catch (err) {
       showToast(err.message || 'Error al registrar', 'error');
@@ -241,6 +268,318 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // ==========================================================
+  // Hotels Service: Lógica de Catálogo y Administración (RBAC)
+  // ==========================================================
+
+
+  let currentHotelsCache = [];
+
+  async function loadHotels() {
+    if (!hotelsGrid) return;
+
+    hotelsGrid.innerHTML = `
+      <div class="empty-hotels-box" style="grid-column: 1 / -1;">
+        <span>Consultando hoteles en tiempo real vía Gateway...</span>
+      </div>
+    `;
+
+    const filters = {
+      search: filterHotelSearch?.value?.trim() || undefined,
+      city: filterHotelCity?.value || undefined,
+      stars: filterHotelStars?.value || undefined,
+      petFriendly: filterPetFriendly?.checked ? true : undefined,
+    };
+
+    try {
+      const response = await api.getHotels(filters);
+      const hotels = response?.data || [];
+      currentHotelsCache = hotels;
+      renderHotels(hotels);
+    } catch (err) {
+      hotelsGrid.innerHTML = `
+        <div class="empty-hotels-box" style="grid-column: 1 / -1; border-color: rgba(239, 68, 68, 0.4);">
+          <span style="color: #f87171;">⚠️ No se pudo conectar con Hotels Service (puerto 3002)</span>
+          <div style="font-size: 0.78rem; color: var(--text-dim);">${err.message}</div>
+          <button id="retryHotelsBtn" class="btn-hotel-secondary" style="margin-top: 0.5rem;">Reintentar</button>
+        </div>
+      `;
+      document.getElementById('retryHotelsBtn')?.addEventListener('click', loadHotels);
+    }
+  }
+
+  function renderHotels(hotels) {
+    if (!hotelsGrid) return;
+
+    if (!hotels || hotels.length === 0) {
+      hotelsGrid.innerHTML = `
+        <div class="empty-hotels-box" style="grid-column: 1 / -1;">
+          <span style="font-size: 1.5rem;">🏨</span>
+          <span>No se encontraron hoteles con los filtros seleccionados</span>
+          <div style="font-size: 0.78rem; color: var(--text-dim);">Prueba cambiando la ciudad o haz clic en "Cargar Demo" para sembrar datos.</div>
+        </div>
+      `;
+      return;
+    }
+
+    const currentUser = api.getCurrentUser();
+    const isAdmin = currentUser?.role === 'HOTEL_ADMIN';
+
+    hotelsGrid.innerHTML = hotels.map(hotel => {
+      const firstImg = (hotel.images && hotel.images[0]) || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80';
+      const starsStr = '⭐'.repeat(Math.max(1, Math.min(5, hotel.stars || 4)));
+      const amenitiesPills = (hotel.amenities || []).slice(0, 4).map(a => `<span class="amenity-pill">${a}</span>`).join('');
+      const isOwnerOrAdmin = isAdmin; // Administradores hoteleros gestionan sedes
+
+      return `
+        <div class="hotel-card" data-hotel-id="${hotel.id}">
+          <div class="hotel-img-banner">
+            <img src="${firstImg}" alt="${hotel.name}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80'">
+            <div class="badge-stars">${starsStr}</div>
+            <div class="badge-city">${hotel.city || 'Colombia'}</div>
+          </div>
+
+          <div class="hotel-card-content">
+            <div class="hotel-card-name">${hotel.name}</div>
+            <div class="hotel-card-location">
+              <span>📍</span> <span>${hotel.address || hotel.city}</span>
+            </div>
+            <p class="hotel-card-desc">${hotel.description || 'Sin descripción disponible'}</p>
+
+            <div class="hotel-amenities-tags">
+              ${amenitiesPills}
+              ${hotel.petFriendly ? '<span class="amenity-pill" style="color: #34d399; border-color: rgba(52, 211, 153, 0.3);">🐾 Pet-friendly</span>' : ''}
+            </div>
+
+            <div class="hotel-card-footer">
+              <div class="hotel-times-meta">
+                In: ${hotel.checkInTime || '15:00'} | Out: ${hotel.checkOutTime || '11:00'}
+              </div>
+
+              <div class="hotel-card-btns">
+                <button class="btn-card-sm primary view-hotel-btn" data-id="${hotel.id}">
+                  Detalle
+                </button>
+                ${isOwnerOrAdmin ? `
+                  <button class="btn-card-sm edit-hotel-btn" data-id="${hotel.id}" style="background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8;">
+                    Editar
+                  </button>
+                  <button class="btn-card-sm danger delete-hotel-btn" data-id="${hotel.id}" data-name="${hotel.name}">
+                    ✕
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Asignar eventos de botones de tarjeta
+    document.querySelectorAll('.view-hotel-btn').forEach(btn => {
+      btn.addEventListener('click', () => openHotelDetail(btn.dataset.id));
+    });
+
+    document.querySelectorAll('.edit-hotel-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const hotel = currentHotelsCache.find(h => h.id === btn.dataset.id);
+        if (hotel) openHotelForm(hotel);
+      });
+    });
+
+    document.querySelectorAll('.delete-hotel-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        handleDeleteHotel(btn.dataset.id, btn.dataset.name);
+      });
+    });
+  }
+
+  // Visualizar Detalle de Hotel
+  async function openHotelDetail(hotelId) {
+    try {
+      const hotel = await api.getHotelById(hotelId);
+      if (!hotel) return;
+
+      document.getElementById('detailTitle').textContent = hotel.name;
+      document.getElementById('detailAddress').textContent = `📍 ${hotel.address}, ${hotel.city}, ${hotel.country || 'Colombia'}`;
+      document.getElementById('detailDescription').textContent = hotel.description;
+      document.getElementById('detailStars').textContent = '⭐'.repeat(hotel.stars || 5);
+      document.getElementById('detailCity').textContent = hotel.city;
+      
+      const firstImg = (hotel.images && hotel.images[0]) || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80';
+      document.getElementById('detailImg').src = firstImg;
+
+      const amenitiesBox = document.getElementById('detailAmenities');
+      amenitiesBox.innerHTML = (hotel.amenities || []).map(a => `<span class="amenity-pill">${a}</span>`).join('');
+
+      document.getElementById('detailCheckIn').textContent = hotel.checkInTime || '15:00';
+      document.getElementById('detailCheckOut').textContent = hotel.checkOutTime || '11:00';
+      document.getElementById('detailPetFriendly').innerHTML = hotel.petFriendly 
+        ? '<span style="color: #34d399;">✅ Sí, admite mascotas</span>' 
+        : '<span style="color: #94a3b8;">❌ No admite mascotas</span>';
+      document.getElementById('detailContact').textContent = `📞 ${hotel.phone || 'N/A'} | ✉️ ${hotel.email || 'N/A'}`;
+      document.getElementById('detailCancellation').textContent = hotel.cancellationPolicy || 'Cancelación estándar.';
+
+      hotelDetailModal.style.display = 'flex';
+    } catch (err) {
+      showToast(`Error al consultar detalle del hotel: ${err.message}`, 'error');
+    }
+  }
+
+  // Abrir Formulario Crear / Editar Hotel (Solo HOTEL_ADMIN)
+  function openHotelForm(hotel = null) {
+    hotelUpsertForm.reset();
+
+    if (hotel) {
+      hotelFormTitle.textContent = '✏️ Editar Sede Hotelera';
+      document.getElementById('formHotelId').value = hotel.id;
+      document.getElementById('formHotelName').value = hotel.name || '';
+      document.getElementById('formHotelDesc').value = hotel.description || '';
+      document.getElementById('formHotelStars').value = hotel.stars || '4';
+      document.getElementById('formHotelCity').value = hotel.city || '';
+      document.getElementById('formHotelAddress').value = hotel.address || '';
+      document.getElementById('formHotelCountry').value = hotel.country || 'Colombia';
+      document.getElementById('formHotelPhone').value = hotel.phone || '';
+      document.getElementById('formHotelEmail').value = hotel.email || '';
+      document.getElementById('formHotelImages').value = (hotel.images || []).join(', ');
+      document.getElementById('formHotelAmenities').value = (hotel.amenities || []).join(', ');
+      document.getElementById('formHotelCheckIn').value = hotel.checkInTime || '15:00';
+      document.getElementById('formHotelCheckOut').value = hotel.checkOutTime || '11:00';
+      document.getElementById('formHotelCancel').value = hotel.cancellationPolicy || '';
+      document.getElementById('formHotelPetFriendly').checked = !!hotel.petFriendly;
+    } else {
+      hotelFormTitle.textContent = '🏢 Registrar Nueva Sede Hotelera';
+      document.getElementById('formHotelId').value = '';
+    }
+
+    hotelFormModal.style.display = 'flex';
+  }
+
+  // Guardar Hotel (POST / PUT)
+  hotelUpsertForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById('formHotelId').value;
+    const name = document.getElementById('formHotelName').value.trim();
+    const description = document.getElementById('formHotelDesc').value.trim();
+    const stars = parseInt(document.getElementById('formHotelStars').value, 10);
+    const city = document.getElementById('formHotelCity').value.trim();
+    const address = document.getElementById('formHotelAddress').value.trim();
+    const country = document.getElementById('formHotelCountry').value.trim() || 'Colombia';
+    const phone = document.getElementById('formHotelPhone').value.trim();
+    const email = document.getElementById('formHotelEmail').value.trim();
+    
+    const rawImages = document.getElementById('formHotelImages').value.trim();
+    const images = rawImages ? rawImages.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+
+    const rawAmenities = document.getElementById('formHotelAmenities').value.trim();
+    const amenities = rawAmenities ? rawAmenities.split(',').map(s => s.trim()).filter(Boolean) : ['WiFi', 'Piscina'];
+
+    const checkInTime = document.getElementById('formHotelCheckIn').value.trim() || '15:00';
+    const checkOutTime = document.getElementById('formHotelCheckOut').value.trim() || '11:00';
+    const cancellationPolicy = document.getElementById('formHotelCancel').value.trim();
+    const petFriendly = document.getElementById('formHotelPetFriendly').checked;
+
+    const payload = {
+      name,
+      description,
+      stars,
+      city,
+      address,
+      country,
+      phone,
+      email,
+      images,
+      amenities,
+      checkInTime,
+      checkOutTime,
+      cancellationPolicy,
+      petFriendly,
+    };
+
+    try {
+      submitHotelFormBtn.disabled = true;
+      submitHotelFormBtn.innerHTML = '<span>GUARDANDO EN POSTGRESQL...</span>';
+
+      if (id) {
+        await api.updateHotel(id, payload);
+        showToast(`Hotel '${name}' actualizado con éxito`, 'success');
+      } else {
+        await api.createHotel(payload);
+        showToast(`Hotel '${name}' registrado y publicado exitosamente`, 'success');
+      }
+
+      hotelFormModal.style.display = 'none';
+      await loadHotels();
+    } catch (err) {
+      showToast(err.message || 'Error al persistir hotel', 'error');
+    } finally {
+      submitHotelFormBtn.disabled = false;
+      submitHotelFormBtn.innerHTML = '<span>GUARDAR HOTEL</span>';
+    }
+  });
+
+  // Desactivar Hotel
+  async function handleDeleteHotel(id, name) {
+    if (!confirm(`¿Estás seguro de desactivar el hotel "${name}"?`)) return;
+
+    try {
+      await api.deleteHotel(id);
+      showToast(`Hotel "${name}" desactivado exitosamente`, 'info');
+      await loadHotels();
+    } catch (err) {
+      showToast(err.message || 'Error al desactivar hotel', 'error');
+    }
+  }
+
+  // Botones y Filtros de Hotels
+  openCreateHotelBtn?.addEventListener('click', () => openHotelForm(null));
+  
+  seedHotelsBtn?.addEventListener('click', async () => {
+    try {
+      showToast('Insertando catálogo de hoteles demo...', 'info');
+      const res = await api.seedHotels();
+      showToast(res.message || 'Semilla ejecutada con éxito', 'success');
+      await loadHotels();
+    } catch (err) {
+      showToast(err.message || 'Error al ejecutar seed', 'error');
+    }
+  });
+
+  refreshHotelsBtn?.addEventListener('click', () => {
+    loadHotels();
+    showToast('Catálogo de hoteles actualizado', 'info');
+  });
+
+  // Cerrar Modales
+  closeDetailModalBtn?.addEventListener('click', () => {
+    hotelDetailModal.style.display = 'none';
+  });
+
+  closeFormModalBtn?.addEventListener('click', () => {
+    hotelFormModal.style.display = 'none';
+  });
+
+  hotelDetailModal?.addEventListener('click', (e) => {
+    if (e.target === hotelDetailModal) hotelDetailModal.style.display = 'none';
+  });
+
+  hotelFormModal?.addEventListener('click', (e) => {
+    if (e.target === hotelFormModal) hotelFormModal.style.display = 'none';
+  });
+
+  // Filtros interactivos con debounce
+  let filterTimer = null;
+  function triggerFilterDebounce() {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(loadHotels, 350);
+  }
+
+  filterHotelSearch?.addEventListener('input', triggerFilterDebounce);
+  filterHotelCity?.addEventListener('change', loadHotels);
+  filterHotelStars?.addEventListener('change', loadHotels);
+  filterPetFriendly?.addEventListener('change', loadHotels);
+
   // Monitoreo de Salud de Microservicios
   async function checkSystemHealth(manual = false) {
     try {
@@ -252,14 +591,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const services = await api.checkServicesHealth();
+      
       const auth = services?.services?.find(s => s.service === 'auth-service');
       if (auth && auth.status === 'ONLINE') {
         authDot.className = 'dot online';
       } else {
         authDot.className = 'dot offline';
       }
+
+      const hotels = services?.services?.find(s => s.service === 'hotels-service');
+      if (hotels && hotels.status === 'ONLINE') {
+        hotelsDot.className = 'dot online';
+      } else {
+        hotelsDot.className = 'dot offline';
+      }
     } catch {
       authDot.className = 'dot offline';
+      hotelsDot.className = 'dot offline';
     }
 
     if (manual) {
@@ -272,3 +620,4 @@ document.addEventListener('DOMContentLoaded', () => {
   checkSystemHealth();
   setInterval(checkSystemHealth, 9000);
 });
+

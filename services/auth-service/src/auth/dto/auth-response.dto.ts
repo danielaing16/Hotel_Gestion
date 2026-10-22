@@ -32,6 +32,14 @@ export class AuthResponseDto {
   access_token: string;
 
   @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'Alias en camelCase del token de acceso JWT',
+    required: false,
+  })
+  accessToken?: string;
+
+
+  @ApiProperty({
     example: 'Bearer',
     description: 'Tipo de token',
   })

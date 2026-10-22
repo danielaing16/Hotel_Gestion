@@ -64,10 +64,16 @@ class HotelApiClient {
 
   // Auth Endpoints (vía Gateway: /api/auth/*)
   async register(userData) {
-    return await this.request('/api/auth/register', {
+    const res = await this.request('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
+
+    const token = res?.accessToken || res?.access_token;
+    if (res && token) {
+      this.saveSession(token, res.user);
+    }
+    return res;
   }
 
   async login(email, password) {
@@ -76,11 +82,13 @@ class HotelApiClient {
       body: JSON.stringify({ email, password }),
     });
 
-    if (res && res.accessToken) {
-      this.saveSession(res.accessToken, res.user);
+    const token = res?.accessToken || res?.access_token;
+    if (res && token) {
+      this.saveSession(token, res.user);
     }
     return res;
   }
+
 
   async getProfile() {
     return await this.request('/api/auth/profile', {
@@ -91,6 +99,64 @@ class HotelApiClient {
   async testAdminOnly() {
     return await this.request('/api/auth/admin-only', {
       method: 'GET',
+    });
+  }
+
+  // Hotels Endpoints (vía Gateway: /api/hotels/*)
+  async getHotels(filters = {}) {
+    const params = new URLSearchParams();
+    if (filters.search) params.append('search', filters.search);
+    if (filters.city) params.append('city', filters.city);
+    if (filters.stars) params.append('stars', filters.stars);
+    if (filters.minStars) params.append('minStars', filters.minStars);
+    if (filters.petFriendly !== undefined && filters.petFriendly !== '') {
+      params.append('petFriendly', filters.petFriendly);
+    }
+    if (filters.amenity) params.append('amenity', filters.amenity);
+    if (filters.page) params.append('page', filters.page);
+    if (filters.limit) params.append('limit', filters.limit);
+
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return await this.request(`/api/hotels${queryString}`, {
+      method: 'GET',
+    });
+  }
+
+  async getHotelById(id) {
+    return await this.request(`/api/hotels/${id}`, {
+      method: 'GET',
+    });
+  }
+
+  async getMyHotels() {
+    return await this.request('/api/hotels/admin/my-hotels', {
+      method: 'GET',
+    });
+  }
+
+  async createHotel(hotelData) {
+    return await this.request('/api/hotels', {
+      method: 'POST',
+      body: JSON.stringify(hotelData),
+    });
+  }
+
+  async updateHotel(id, hotelData) {
+    return await this.request(`/api/hotels/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(hotelData),
+    });
+  }
+
+  async deleteHotel(id, force = false) {
+    return await this.request(`/api/hotels/${id}?force=${force}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async seedHotels() {
+    return await this.request('/api/hotels/seed', {
+      method: 'POST',
     });
   }
 
@@ -105,8 +171,12 @@ class HotelApiClient {
 
   // Session Storage Management
   saveSession(token, user) {
-    localStorage.setItem('hotel_jwt_token', token);
-    localStorage.setItem('hotel_user_data', JSON.stringify(user));
+    if (token && token !== 'undefined' && token !== 'null') {
+      localStorage.setItem('hotel_jwt_token', token);
+    }
+    if (user) {
+      localStorage.setItem('hotel_user_data', JSON.stringify(user));
+    }
   }
 
   clearSession() {
@@ -115,13 +185,15 @@ class HotelApiClient {
   }
 
   getToken() {
-    return localStorage.getItem('hotel_jwt_token');
+    const token = localStorage.getItem('hotel_jwt_token');
+    return (token && token !== 'undefined' && token !== 'null') ? token : null;
   }
 
   getCurrentUser() {
     const data = localStorage.getItem('hotel_user_data');
     return data ? JSON.parse(data) : null;
   }
+
 }
 
 window.apiClient = new HotelApiClient();

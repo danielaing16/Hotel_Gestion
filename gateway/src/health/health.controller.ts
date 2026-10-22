@@ -54,6 +54,11 @@ export class HealthController {
         url: this.configService.get<string>('services.auth'),
         healthCheckPath: '/api/docs',
       },
+      {
+        name: 'hotels-service',
+        url: this.configService.get<string>('services.hotels'),
+        healthCheckPath: '/api/docs',
+      },
     ];
 
     const results = await Promise.all(

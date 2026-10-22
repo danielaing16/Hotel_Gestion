@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Travel & Resorts - Explora Horizontes</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=2.5">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
+
 </head>
 <body>
 
@@ -30,7 +31,11 @@
         </div>
         <div class="status-badge" title="Auth Service puerto 3001">
           <span class="dot" id="authDot"></span>
-          <span>Auth Service: 3001</span>
+          <span>Auth: 3001</span>
+        </div>
+        <div class="status-badge" title="Hotels Service puerto 3002">
+          <span class="dot" id="hotelsDot"></span>
+          <span>Hotels: 3002</span>
         </div>
       </div>
     </div>
@@ -225,7 +230,214 @@
         <div id="rbacFeedback" class="token-box" style="display: none; min-height: 80px;"></div>
       </div>
     </div>
+
+    <!-- Sección de Catálogo y Gestión de Hoteles -->
+    <div class="hotels-section">
+      <div class="hotels-header-row">
+        <div class="hotels-title-area">
+          <h2><span>🏨</span> Catálogo Central de Hoteles</h2>
+          <p>Catálogo comercial y operativo provisto por el microservicio <code>hotels-service:3002</code> vía API Gateway.</p>
+        </div>
+
+        <div class="hotels-actions-row">
+          <button id="openCreateHotelBtn" class="btn-hotel-action" style="display: none;">
+            <span>➕</span> Registrar Nuevo Hotel
+          </button>
+          <button id="seedHotelsBtn" class="btn-hotel-secondary" title="Poblar catálogo de prueba">
+            <span>🌱</span> Cargar Demo
+          </button>
+          <button id="refreshHotelsBtn" class="btn-hotel-secondary" title="Recargar catálogo">
+            <span>🔄</span> Refrescar
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros en Tiempo Real -->
+      <div class="hotels-filter-bar">
+        <div class="filter-input-wrap">
+          <input type="text" id="filterHotelSearch" class="filter-input" placeholder="🔍 Buscar por nombre o descripción...">
+        </div>
+        <select id="filterHotelCity" class="filter-select">
+          <option value="">Todas las Ciudades</option>
+          <option value="Cartagena">Cartagena</option>
+          <option value="Medellín">Medellín</option>
+          <option value="San Andrés">San Andrés</option>
+          <option value="Bogotá">Bogotá</option>
+          <option value="Santa Marta">Santa Marta</option>
+          <option value="Armenia">Armenia</option>
+        </select>
+        <select id="filterHotelStars" class="filter-select">
+          <option value="">Cualquier Categoría</option>
+          <option value="5">⭐⭐⭐⭐⭐ (5 Estrellas)</option>
+          <option value="4">⭐⭐⭐⭐ (4 Estrellas)</option>
+          <option value="3">⭐⭐⭐ (3 Estrellas)</option>
+        </select>
+        <label class="filter-checkbox-wrap">
+          <input type="checkbox" id="filterPetFriendly">
+          <span>🐾 Pet-friendly</span>
+        </label>
+      </div>
+
+      <!-- Cuadrícula Dinámica de Hoteles -->
+      <div class="hotels-grid" id="hotelsGrid">
+        <div class="empty-hotels-box">
+          <span>Consultando catálogo hotelero...</span>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <!-- Modal: Detalle de Hotel -->
+  <div class="modal-overlay" id="hotelDetailModal" style="display: none;">
+    <div class="modal-dialog">
+      <button class="modal-close-btn" id="closeDetailModalBtn">&times;</button>
+      
+      <div id="detailBannerWrap" style="height: 240px; border-radius: var(--radius-md); overflow: hidden; position: relative;">
+        <img id="detailImg" src="" alt="Hotel" style="width: 100%; height: 100%; object-fit: cover;">
+        <div class="badge-stars" id="detailStars" style="top: 14px; left: 14px;"></div>
+        <div class="badge-city" id="detailCity" style="top: 14px; right: 14px;"></div>
+      </div>
+
+      <div>
+        <h2 id="detailTitle" style="font-family: var(--font-heading); font-size: 1.45rem; font-weight: 800; color: #fff;"></h2>
+        <div id="detailAddress" style="font-size: 0.85rem; color: #38bdf8; margin-top: 0.25rem;"></div>
+      </div>
+
+      <div id="detailDescription" style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6;"></div>
+
+      <div>
+        <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.4rem; color: #fff;">Amenidades y Servicios</div>
+        <div class="hotel-amenities-tags" id="detailAmenities"></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: var(--radius-md); font-size: 0.82rem;">
+        <div>
+          <div style="color: var(--text-dim);">Políticas de Horario</div>
+          <div style="color: #fff; font-weight: 600; margin-top: 0.2rem;">
+            Check-in: <span id="detailCheckIn" style="color: #34d399;"></span> | Check-out: <span id="detailCheckOut" style="color: #f87171;"></span>
+          </div>
+        </div>
+        <div>
+          <div style="color: var(--text-dim);">Admisión de Mascotas</div>
+          <div id="detailPetFriendly" style="font-weight: 600; margin-top: 0.2rem;"></div>
+        </div>
+        <div>
+          <div style="color: var(--text-dim);">Contacto Directo</div>
+          <div id="detailContact" style="color: #cbd5e1; margin-top: 0.2rem;"></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-dim); margin-bottom: 0.3rem;">Política de Cancelación</div>
+        <div id="detailCancellation" style="font-size: 0.8rem; color: #cbd5e1; font-style: italic;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Crear / Editar Hotel (Solo HOTEL_ADMIN) -->
+  <div class="modal-overlay" id="hotelFormModal" style="display: none;">
+    <div class="modal-dialog">
+      <button class="modal-close-btn" id="closeFormModalBtn">&times;</button>
+      
+      <div>
+        <h2 id="hotelFormTitle" style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 800; color: #fff;">
+          🏢 Registrar Nueva Sede Hotelera
+        </h2>
+        <p style="font-size: 0.82rem; color: var(--text-dim);">
+          Los datos ingresados se persistirán en <code>hotels-db</code> mediante validaciones estrictas y control RBAC.
+        </p>
+      </div>
+
+      <form id="hotelUpsertForm" style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <input type="hidden" id="formHotelId">
+
+        <div class="field-group">
+          <label class="input-label" for="formHotelName">Nombre del Hotel *</label>
+          <input type="text" id="formHotelName" class="input-pill" placeholder="Ej. Cartagena Paradise Beach Resort" required>
+        </div>
+
+        <div class="field-group">
+          <label class="input-label" for="formHotelDesc">Descripción Detallada *</label>
+          <textarea id="formHotelDesc" class="input-pill" rows="3" style="border-radius: 12px; height: auto;" placeholder="Describe las comodidades, experiencia y valor del hotel..." required></textarea>
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label class="input-label" for="formHotelStars">Categoría (Estrellas) *</label>
+            <select id="formHotelStars" class="input-pill" style="cursor: pointer;">
+              <option value="5" style="color:#000;">⭐⭐⭐⭐⭐ (5 Estrellas)</option>
+              <option value="4" style="color:#000;" selected>⭐⭐⭐⭐ (4 Estrellas)</option>
+              <option value="3" style="color:#000;">⭐⭐⭐ (3 Estrellas)</option>
+              <option value="2" style="color:#000;">⭐⭐ (2 Estrellas)</option>
+              <option value="1" style="color:#000;">⭐ (1 Estrella)</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="input-label" for="formHotelCity">Ciudad *</label>
+            <input type="text" id="formHotelCity" class="input-pill" placeholder="Cartagena, Medellín, etc." required>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label class="input-label" for="formHotelAddress">Dirección Física *</label>
+            <input type="text" id="formHotelAddress" class="input-pill" placeholder="Carrera 1 # 10-20" required>
+          </div>
+          <div class="field-group">
+            <label class="input-label" for="formHotelCountry">País</label>
+            <input type="text" id="formHotelCountry" class="input-pill" value="Colombia">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label class="input-label" for="formHotelPhone">Teléfono *</label>
+            <input type="tel" id="formHotelPhone" class="input-pill" placeholder="+57 605 1234567" required>
+          </div>
+          <div class="field-group">
+            <label class="input-label" for="formHotelEmail">Correo de Contacto *</label>
+            <input type="email" id="formHotelEmail" class="input-pill" placeholder="reservas@hotel.com" required>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="input-label" for="formHotelImages">Fotos (URLs separadas por comas)</label>
+          <input type="text" id="formHotelImages" class="input-pill" placeholder="https://images.unsplash.com/... , https://...">
+        </div>
+
+        <div class="field-group">
+          <label class="input-label" for="formHotelAmenities">Amenidades (Separadas por comas) *</label>
+          <input type="text" id="formHotelAmenities" class="input-pill" value="WiFi de Alta Velocidad, Piscina, Spa, Restaurante, Gimnasio, Parqueadero" required>
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label class="input-label" for="formHotelCheckIn">Hora Check-in</label>
+            <input type="text" id="formHotelCheckIn" class="input-pill" value="15:00">
+          </div>
+          <div class="field-group">
+            <label class="input-label" for="formHotelCheckOut">Hora Check-out</label>
+            <input type="text" id="formHotelCheckOut" class="input-pill" value="11:00">
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="input-label" for="formHotelCancel">Política de Cancelación *</label>
+          <input type="text" id="formHotelCancel" class="input-pill" value="Cancelación gratuita hasta 48 horas antes de la llegada." required>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+          <input type="checkbox" id="formHotelPetFriendly" style="cursor: pointer; width: 18px; height: 18px;">
+          <label for="formHotelPetFriendly" style="font-size: 0.85rem; color: #fff; cursor: pointer;">¿Admite Mascotas? (Pet-friendly)</label>
+        </div>
+
+        <button type="submit" class="btn-blue" id="submitHotelFormBtn" style="margin-top: 0.75rem;">
+          <span>GUARDAR HOTEL</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
 
   <!-- Consola de Tráfico HTTP en Vivo -->
   <div class="live-console-box">
@@ -246,7 +458,8 @@
   <div class="toast-shelf" id="toastShelf"></div>
 
   <!-- Scripts -->
-  <script src="js/api.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/api.js?v=2.5"></script>
+  <script src="js/app.js?v=2.5"></script>
 </body>
 </html>
+

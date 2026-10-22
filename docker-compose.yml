@@ -1,4 +1,16 @@
 services:
+
+  adminer:
+    image: adminer
+    container_name: hotel_adminer
+    ports:
+      - "8080:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+    networks:
+      - hotel-network
+
+
   # Base de datos PostgreSQL para el Auth Service
   auth-db:
     image: postgres:16-alpine
@@ -15,7 +27,7 @@ services:
     networks:
       - hotel-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-postgres} -d ${AUTH_DB_NAME:-hotel_auth_db}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-postgres} -d ${AUTH_DB_NAME:-hotel_auth_db}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -48,6 +60,54 @@ services:
     networks:
       - hotel-network
 
+  # Base de datos PostgreSQL para Hotels Service
+  hotels-db:
+    image: postgres:16-alpine
+    container_name: hotel_hotels_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${HOTELS_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${HOTELS_DB_PASSWORD:-postgres123}
+      POSTGRES_DB: ${HOTELS_DB_NAME:-hotel_hotels_db}
+    ports:
+      - "${HOTELS_DB_PORT:-5433}:5432"
+    volumes:
+      - hotels_db_data:/var/lib/postgresql/data
+    networks:
+      - hotel-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${HOTELS_DB_USER:-postgres} -d ${HOTELS_DB_NAME:-hotel_hotels_db}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Microservicio de Hoteles y Sedes
+  hotels-service:
+    build:
+      context: ./services/hotels-service
+      dockerfile: Dockerfile
+    container_name: hotel_hotels_service
+    restart: always
+    depends_on:
+      hotels-db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      DB_HOST: hotels-db
+      DB_PORT: 5432
+      DB_USERNAME: ${HOTELS_DB_USER:-postgres}
+      DB_PASSWORD: ${HOTELS_DB_PASSWORD:-postgres123}
+      DB_DATABASE: ${HOTELS_DB_NAME:-hotel_hotels_db}
+      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_hotel_2026_dev}
+    ports:
+      - "3002:3002"
+    volumes:
+      # Sincronización en vivo para desarrollo
+      - ./services/hotels-service/src:/app/src
+    networks:
+      - hotel-network
+
   # API Gateway Unificado
   api-gateway:
     build:
@@ -57,6 +117,7 @@ services:
     restart: always
     depends_on:
       - auth-service
+      - hotels-service
     environment:
       NODE_ENV: development
       PORT: 3000
@@ -96,7 +157,10 @@ services:
 volumes:
   auth_db_data:
     driver: local
+  hotels_db_data:
+    driver: local
 
 networks:
   hotel-network:
     driver: bridge
+
